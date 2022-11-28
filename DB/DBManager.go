@@ -55,13 +55,4 @@ func (db *DBManager) Init() {
 	db.DBMS.AutoMigrate(&ZCMUSER{})
 	db.DBMS.AutoMigrate(&SecurityPhrase{})
 	db.DBMS.AutoMigrate(&WebLogin{})
-
-<<<<<<< HEAD
-	db.DBMS.Table("web_login").Where("sso_id = ?", "swh").Update("last_login_time", time.Now())
-
-=======
-	dbData := ZCMUSER{}
-	db.DBMS.Table("zcmuser").Where("itg_user_id = ?", "1000001").Select("itg_user_nm", "itg_org_nm", "user_poa_nm").First(&dbData)
-	log.Println(dbData.Itg_org_nm)
->>>>>>> parent of 6aa176f (세션으로 id전달)
 }

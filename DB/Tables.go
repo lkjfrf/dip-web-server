@@ -78,15 +78,9 @@ type SecurityPhrase struct { // 보안문구
 }
 
 type WebLogin struct { // 암호화로그인
-<<<<<<< HEAD
 	SsoId         string `gorm:"primaryKey"`
 	KeyValue      string
 	LastLoginTime time.Time
 	KeyStoreTime  time.Time
 	CreateAt      time.Time `gorm:"autoCreateTime:nano"`
-=======
-	SsoId    string `gorm:"primaryKey"`
-	Key      string
-	CreateAt time.Time `gorm:"autoCreateTime:nano"`
->>>>>>> parent of 6aa176f (세션으로 id전달)
 }
