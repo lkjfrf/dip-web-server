@@ -80,6 +80,7 @@ type SecurityPhrase struct { // 보안문구
 type WebLogin struct { // 암호화로그인
 	SsoId         string `gorm:"primaryKey"`
 	KeyValue      string
+	IP            string
 	LastLoginTime time.Time
 	KeyStoreTime  time.Time
 	CreateAt      time.Time `gorm:"autoCreateTime:nano"`

@@ -13,6 +13,7 @@ import (
 
 	db "github.com/DW-inc/LauncherFileServer/DB"
 	logm "github.com/DW-inc/LauncherFileServer/Log"
+	"github.com/DW-inc/LauncherFileServer/setting"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -28,11 +29,12 @@ var Charset string
 var SessionStorage *session.Store
 
 type SinginData struct {
-	Name     string
-	SSO_ID   string
-	Grade    string
-	Team     string
-	Security string
+	Name      string
+	SSO_ID    string
+	Grade     string
+	Team      string
+	Security  string
+	LastLogin string
 }
 
 type SsoIdStruct struct {
@@ -43,9 +45,12 @@ func main() {
 	//------------ INIT Setting  ------------//
 	Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	Tokens = sync.Map{}
+	setting.GetStManager().Init()
 	db.GetDBManager().Init()
 	logm.GetLogManager().SetLogFile()
-	app := fiber.New(fiber.Config{})
+	app := fiber.New(fiber.Config{
+		BodyLimit: 9999 * 1024 * 1024,
+	})
 	app.Use(cors.New(cors.ConfigDefault))
 	app.Use(logger.New(logger.ConfigDefault))
 	SessionStorage = session.New(session.Config{
@@ -77,30 +82,39 @@ func main() {
 		return c.Next()
 	})
 	app.Static("/sso/autologin", "./WebServer")
+
+	app.Static("/uploadpage", "./UploadPage")
+
 	app.Get("/sso/getinfo", func(c *fiber.Ctx) error {
 		sso_id := GetSsoidFromSession(c)
 		log.Println("sso/getinfo recv ssoid :", sso_id)
 		dbData := db.ZCMUSER{}
 		err := db.GetDBManager().DBMS.Table("zcmuser").Where("itg_user_id = ?", sso_id).Select("itg_user_nm", "itg_org_nm", "user_poa_nm").First(&dbData).Error
+
+		player := db.WebLogin{}
+		db.GetDBManager().DBMS.Table("web_login").Where("sso_id = ?", sso_id).Select("last_login_time").First(&player)
+
 		var data SinginData
 		if sso_id == "" || err != nil {
 			if err != nil {
 				log.Println("DBError:", err)
 			}
 			data = SinginData{
-				Name:     "",
-				SSO_ID:   "",
-				Grade:    "",
-				Team:     "",
-				Security: GetSecurity(),
+				Name:      "",
+				SSO_ID:    "",
+				Grade:     "",
+				Team:      "",
+				Security:  GetSecurity(),
+				LastLogin: "",
 			}
 		} else {
 			data = SinginData{
-				Name:     dbData.Itg_user_nm,
-				SSO_ID:   sso_id,
-				Grade:    dbData.UserPoaNm,
-				Team:     dbData.Itg_org_nm,
-				Security: GetSecurity(),
+				Name:      dbData.Itg_user_nm,
+				SSO_ID:    sso_id,
+				Grade:     dbData.UserPoaNm,
+				Team:      dbData.Itg_org_nm,
+				Security:  GetSecurity(),
+				LastLogin: string(player.LastLoginTime.Format("2006-01-02(Mon) 15:04:05")),
 			}
 		}
 		js, err := json.Marshal(data)
@@ -109,9 +123,11 @@ func main() {
 		}
 		return c.JSON(string(js))
 	})
+
 	app.Use("/files", filesystem.New(filesystem.Config{
 		Root: http.Dir("./file"),
 	}))
+
 	app.Post("/savelogin", func(c *fiber.Ctx) error {
 		data := SsoIdStruct{}
 		log.Println(string(c.Body()))
@@ -127,7 +143,7 @@ func main() {
 		//------------ IP Store ------------//
 		player := db.WebLogin{}
 		if r := db.GetDBManager().DBMS.Table("web_login").Where("sso_id = ?", sso_id).First(&player); r.RowsAffected == 0 {
-			player = db.WebLogin{SsoId: sso_id, LastLoginTime: time.Now()}
+			player = db.WebLogin{SsoId: sso_id, LastLoginTime: time.Now(), IP: IP}
 			db.GetDBManager().DBMS.Create(&player)
 		} else {
 			db.GetDBManager().DBMS.Table("web_login").Where("sso_id = ?", sso_id).Update("last_login_time", time.Now())
@@ -185,7 +201,7 @@ func main() {
 		return nil
 	})
 
-	app.Listen(":3000")
+	app.Listen(setting.GetStManager().Port)
 }
 
 func GetSecurity() string {
