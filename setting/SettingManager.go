@@ -27,7 +27,7 @@ func (st *SettingHandler) Init() {
 	switch st.ServerType {
 	case 0:
 		st.Port = ":3000"
-		st.LogPath = "/data/DIPServerLog/WebServer/"
+		st.LogPath = "../Server/ServerLog/WebServer/"
 		st.DB = "root:Tomatosoup22!@tcp(127.0.0.1:3306)/dip?charset=utf8mb4&parseTime=True&loc=Local"
 	case 1:
 		st.Port = ":3000"

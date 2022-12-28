@@ -84,4 +84,5 @@ type WebLogin struct { // 암호화로그인
 	LastLoginTime time.Time
 	KeyStoreTime  time.Time
 	CreateAt      time.Time `gorm:"autoCreateTime:nano"`
+	IsOnline      bool
 }
